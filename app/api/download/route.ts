@@ -17,18 +17,20 @@ function sanitize(name: string): string {
   );
 }
 
-async function resolveParams(req: NextRequest): Promise<{ url: string; optionId: string } | null> {
+async function resolveParams(req: NextRequest): Promise<{ url: string; optionId: string; cookies: string } | null> {
+  let cookies = "";
   if (req.method === "POST") {
     try {
-      const body = (await req.json()) as { url?: string; optionId?: string };
+      const body = (await req.json()) as { url?: string; optionId?: string; cookies?: string };
       const url = (body.url || "").trim();
       const optionId = (body.optionId || "").trim();
-      if (url && optionId) return { url, optionId };
+      cookies = typeof body.cookies === "string" ? body.cookies : "";
+      if (url && optionId) return { url, optionId, cookies };
     } catch {}
   }
   const url = (req.nextUrl.searchParams.get("url") || "").trim();
   const optionId = (req.nextUrl.searchParams.get("optionId") || "").trim();
-  if (url && optionId) return { url, optionId };
+  if (url && optionId) return { url, optionId, cookies };
   return null;
 }
 
@@ -43,13 +45,14 @@ export async function POST(req: NextRequest) {
 async function handle(req: NextRequest) {
   const params = await resolveParams(req);
   if (!params) return new Response("Missing url or optionId.", { status: 400 });
-  const { url, optionId } = params;
+  const { url, optionId, cookies } = params;
 
   // ---------- DIRECT formats: redirect browser straight to the media URL ----------
   if (!optionId.startsWith("merge-") && !optionId.startsWith("audio-mp3")) {
     try {
       const meta = await runYtDlp([url, "--dump-single-json", "--skip-download"], {
         parseJson: true,
+        cookieTxt: cookies,
       });
       const fmtId = optionId.replace(/^prog-|audio-orig-/, "");
       const fmt = (meta.formats || []).find((f: any) => String(f.format_id) === fmtId);
@@ -89,6 +92,7 @@ async function handle(req: NextRequest) {
   try {
     const m = await runYtDlp([url, "--dump-single-json", "--skip-download"], {
       parseJson: true,
+      cookieTxt: cookies,
     });
     niceName = sanitize(m.title || "video");
   } catch {}
@@ -109,7 +113,7 @@ async function handle(req: NextRequest) {
   ];
 
   try {
-    await runYtDlp(args, { timeoutMs: 280_000 });
+    await runYtDlp(args, { timeoutMs: 280_000, cookieTxt: cookies });
   } catch (e: any) {
     fs.rmSync(workDir, { recursive: true, force: true });
     const msg = e?.message || "";

@@ -3,7 +3,7 @@
 A fast, clean, and **100% free** YouTube downloader. Paste a link, pick a quality
 (144p → 1080p video, plus MP3), and download. No ads, no accounts, no paid tiers.
 
-🌐 **Live demo:** https://ytdownloader-38oegapa8-xyzg135-cpus-projects.vercel.app
+🌐 **Live demo:** https://ytdownloader-pd2kmltq8-xyzg135-cpus-projects.vercel.app
 
 ---
 
@@ -69,6 +69,11 @@ plan Vercel caps functions at 60s, so very long videos may time out on merge/MP3
   of Service. Download only content you are permitted to.
 - This tool relies on `yt-dlp`; if YouTube changes its internals, update the
   vendored binary in `vendor/` to the latest release.
+- Some videos are blocked by YouTube on the server's cloud IP. For those, open
+  **+ Cookies** under the search box, paste a YouTube `cookies.txt` (Netscape
+  format, exported from your browser), and retry. Cookies are stored only in your
+  browser (localStorage) and sent per-request to yt-dlp — never saved on our
+  servers.
 
 ## Project structure
 

@@ -48,9 +48,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  */
 export function runYtDlp(
   extraArgs: string[],
-  opts: { parseJson?: boolean; timeoutMs?: number } = {}
+  opts: { parseJson?: boolean; timeoutMs?: number; cookieTxt?: string } = {}
 ): Promise<any> {
-  const { parseJson = false, timeoutMs = 240_000 } = opts;
+  const { parseJson = false, timeoutMs = 240_000, cookieTxt } = opts;
   const baseArgs = [
     ...extraArgs,
     "--no-playlist",
@@ -63,11 +63,21 @@ export function runYtDlp(
     "--extractor-args",
   ];
 
+  // Optional browser cookies (Netscape-format .txt). When provided we write them
+  // to a temp file and pass --cookies so YouTube trusts the request. The text is
+  // supplied by the client per-request and never persisted on the server.
+  let cookieFile: string | null = null;
+  if (cookieTxt && cookieTxt.trim().length > 0) {
+    cookieFile = path.join(TMP_BASE, `cookies-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`);
+    fs.writeFileSync(cookieFile, cookieTxt, "utf8");
+  }
+
   async function attempt(clientOrder: string): Promise<string> {
     return new Promise((resolve, reject) => {
       const args = [
         ...baseArgs,
         `youtube:player_client=${clientOrder}`,
+        ...(cookieFile ? ["--cookies", cookieFile] : []),
       ];
       const child = spawn(getYtDlpBin(), args, {
         windowsHide: true,

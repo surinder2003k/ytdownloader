@@ -18,6 +18,24 @@ export default function Downloader() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState<VideoInfo | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [showCookies, setShowCookies] = useState(false);
+  const [cookies, setCookies] = useState(() => {
+    try {
+      return localStorage.getItem("ytgrab_cookies") || "";
+    } catch {
+      return "";
+    }
+  });
+
+  // Persist cookies in the browser only — never sent to our servers except as a
+  // per-request arg to yt-dlp (which forwards them to YouTube). No backend storage.
+  function onCookiesChange(v: string) {
+    setCookies(v);
+    try {
+      if (v.trim()) localStorage.setItem("ytgrab_cookies", v);
+      else localStorage.removeItem("ytgrab_cookies");
+    } catch {}
+  }
 
   async function handleFetch(e: React.FormEvent) {
     e.preventDefault();
@@ -29,7 +47,7 @@ export default function Downloader() {
       const res = await fetch("/api/info", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({ url: url.trim(), cookies: cookies.trim() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Something went wrong.");
@@ -50,7 +68,7 @@ export default function Downloader() {
         // Direct formats: open the server endpoint in an anchor so the browser
         // follows the 302 and downloads straight from YouTube's CDN.
         const a = document.createElement("a");
-        a.href = `/api/download?url=${encodeURIComponent(url.trim())}&optionId=${encodeURIComponent(option.id)}`;
+        a.href = `/api/download?url=${encodeURIComponent(url.trim())}&optionId=${encodeURIComponent(option.id)}&cookies=${encodeURIComponent(cookies.trim())}`;
         a.download = "";
         document.body.appendChild(a);
         a.click();
@@ -63,7 +81,7 @@ export default function Downloader() {
       const res = await fetch("/api/download", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: url.trim(), optionId: option.id }),
+        body: JSON.stringify({ url: url.trim(), optionId: option.id, cookies: cookies.trim() }),
       });
       if (!res.ok || !res.body) {
         const txt = res.headers.get("Content-Type")?.includes("json")
@@ -119,6 +137,40 @@ export default function Downloader() {
           </motion.button>
         </div>
       </form>
+
+      <div className="mt-2 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setShowCookies((v) => !v)}
+          className="text-xs font-medium text-ink-faint transition hover:text-brand-dark"
+        >
+          {showCookies ? "Hide cookies" : "+ Cookies (for blocked videos)"}
+        </button>
+      </div>
+      <AnimatePresence>
+        {showCookies && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-2 overflow-hidden"
+          >
+            <div className="card rounded-xl p-3">
+              <label className="mb-1 block text-xs font-medium text-ink-soft">
+                YouTube cookies (.txt, Netscape format) — optional. Saved only in
+                this browser. Needed only for videos YouTube blocks on the server IP.
+              </label>
+              <textarea
+                value={cookies}
+                onChange={(e) => onCookiesChange(e.target.value)}
+                placeholder={"Paste cookies.txt contents here…"}
+                rows={4}
+                className="w-full resize-y rounded-lg border border-border bg-bg px-3 py-2 text-xs text-ink outline-none focus:border-brand"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {error && (

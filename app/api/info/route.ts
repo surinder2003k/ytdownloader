@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 const URL_RE = /^(https?:\/\/)?(www\.|m\.|music\.)?(youtube\.com|youtu\.be)\/.+$/i;
 
 export async function POST(req: NextRequest) {
-  let body: { url?: string };
+  let body: { url?: string; cookies?: string };
   try {
     body = await req.json();
   } catch {
@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
   }
 
   const url = (body.url || "").trim();
+  const cookies = typeof body.cookies === "string" ? body.cookies : "";
   if (!url) {
     return NextResponse.json({ error: "YouTube URL is required." }, { status: 400 });
   }
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
   try {
     const meta = await runYtDlp(
       [url, "--dump-single-json", "--skip-download"],
-      { parseJson: true }
+      { parseJson: true, cookieTxt: cookies }
     );
 
     const info = buildVideoInfo(meta);
