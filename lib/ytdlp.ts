@@ -23,12 +23,17 @@ function makeTmpBase(): string {
 
 const TMP_BASE = makeTmpBase();
 
-// Resolve the bundled yt-dlp binary. We avoid `require.resolve('youtube-dl-exec/package.json')`
-// because Next's webpack `require.resolve` returns a numeric module id, not a path.
-// On Vercel the function cwd is the project root, so node_modules/youtube-dl-exec/bin
-// is reachable directly. We pick the right extension per platform.
+// Resolve the yt-dlp binary. On Linux (Vercel) we use our vendored standalone
+// ELF binary which bundles its own Python — the youtube-dl-exec package ships a
+// python3 wrapper on Linux that fails ("env: python3: No such file or directory")
+// because serverless runtimes have no system python3. On Windows we use the
+// youtube-dl-exec binary (PE32, bundles Python too).
 function resolveYtDlp(): string {
   const isWindows = process.platform === "win32";
+  if (!isWindows) {
+    const vendored = path.join(process.cwd(), "vendor", "yt-dlp-linux");
+    if (fs.existsSync(vendored)) return vendored;
+  }
   const ext = isWindows ? ".exe" : "";
   return path.join(
     process.cwd(),
