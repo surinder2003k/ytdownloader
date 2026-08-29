@@ -45,6 +45,21 @@ export default function Downloader() {
     if (!info) return;
     setDownloadingId(option.id);
     try {
+      const isDirect = !option.needsMerge;
+      if (isDirect) {
+        // Direct formats: open the server endpoint in a hidden iframe/anchor so
+        // the browser follows the 302 and downloads straight from YouTube's CDN.
+        const a = document.createElement("a");
+        a.href = `/api/download?url=${encodeURIComponent(url.trim())}&optionId=${encodeURIComponent(option.id)}`;
+        a.download = "";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setDownloadingId(null);
+        return;
+      }
+
+      // Merged / MP3: fetch the streamed file and save it as a blob.
       const res = await fetch("/api/download", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -56,26 +71,19 @@ export default function Downloader() {
           : await res.text();
         throw new Error(txt || "Download failed.");
       }
-      // Stream the response to a Blob and trigger a real browser download.
       const reader = res.body.getReader();
       const chunks: Uint8Array[] = [];
-      let received = 0;
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
-        if (value) {
-          chunks.push(value);
-          received += value.length;
-        }
+        if (value) chunks.push(value);
       }
-      const blob = new Blob(chunks);
+      const blob = new Blob(chunks as BlobPart[]);
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       const fname =
         option.container === "mp3"
           ? `${info.title.slice(0, 50)}.mp3`
-          : option.container === "webm"
-          ? `${info.title.slice(0, 50)}.webm`
           : `${info.title.slice(0, 50)}-${option.quality}.mp4`;
       a.download = fname;
       document.body.appendChild(a);
@@ -85,7 +93,6 @@ export default function Downloader() {
       setDownloadingId(null);
     } catch (err: any) {
       setError(err.message || "Download failed.");
-      setStatus("error");
       setDownloadingId(null);
     }
   }

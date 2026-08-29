@@ -1,80 +1,77 @@
-import ytdl from "@distube/ytdl-core";
 import type { VideoInfo, QualityOption } from "./types";
-import { requestOptions } from "./ytdl";
 
-const VIDEO_HEIGHTS = [144, 240, 360, 480, 720, 1080];
+const VIDEO_HEIGHTS = [144, 240, 360, 480, 720, 1080, 1440, 2160];
 
-function estimateSize(lengthSeconds: number, bitrateBps: number): number {
-  return Math.round((bitrateBps * lengthSeconds) / 8 / 1024 / 1024);
+function humanSize(mb?: number): string {
+  if (!mb) return "";
+  if (mb >= 1024) return `~${(mb / 1024).toFixed(1)} GB`;
+  return `~${Math.max(1, Math.round(mb))} MB`;
 }
 
-export async function buildVideoInfo(url: string): Promise<VideoInfo> {
-  const info = await ytdl.getInfo(url, { requestOptions });
-  const videoId = info.videoDetails.videoId;
-  const lengthSeconds = parseInt(info.videoDetails.lengthSeconds, 10) || 0;
+function mbFromBytes(bytes?: number): number | undefined {
+  return bytes ? Math.round(bytes / 1024 / 1024) : undefined;
+}
 
-  const formats = info.formats;
+/** Build our UI-facing format list from a yt-dlp dump-single-json result. */
+export function buildVideoInfo(meta: any): VideoInfo {
+  const formats: any[] = meta.formats || [];
+  const title = meta.title || "video";
+
+  // Separate progressive (has both v+a), video-only, audio-only.
+  const progressive = formats.filter(
+    (f) => f.vcodec && f.vcodec !== "none" && f.acodec && f.acodec !== "none" && f.url
+  );
+  const videoOnly = formats.filter(
+    (f) => f.vcodec && f.vcodec !== "none" && f.acodec === "none" && f.url
+  );
+  const audioOnly = formats.filter(
+    (f) => f.acodec && f.acodec !== "none" && f.vcodec === "none" && f.url
+  );
+
   const options: QualityOption[] = [];
 
-  // ---- Progressive (combined audio+video) — direct download, no ffmpeg ----
+  // --- Progressive combined MP4s (direct download, no ffmpeg) ---
   for (const h of VIDEO_HEIGHTS) {
-    const f = ytdl.filterFormats(formats, `videoandaudio`).find(
-      (fmt) => fmt.height === h && fmt.container === "mp4"
+    const f = progressive.find(
+      (x) => x.height === h && (x.ext === "mp4" || x.ext === "webm")
     );
     if (f) {
       options.push({
-        id: `prog-${h}`,
+        id: `prog-${f.format_id}`,
         type: "video",
         label: `${h}p`,
         quality: `${h}p`,
-        container: "mp4",
-        itag: f.itag,
+        container: f.ext === "webm" ? "webm" : "mp4",
+        itag: Number(f.format_id),
         height: h,
-        bitrateKbps: Math.round((parseInt(f.bitrate || "0", 10) || 0) / 1000),
-        sizeEstimateMB: f.contentLength
-          ? Math.round((parseInt(f.contentLength, 10) || 0) / 1024 / 1024)
-          : estimateSize(lengthSeconds, parseInt(f.bitrate || "0", 10)),
+        bitrateKbps: f.tbr ? Math.round(f.tbr) : undefined,
+        sizeEstimateMB: mbFromBytes(f.filesize),
       });
     }
   }
 
-  // ---- Merged 1080p (and any height that lacked a progressive stream) ----
-  // For each height not already covered by a progressive mp4, offer a merge job.
-  const coveredHeights = new Set(
-    options.filter((o) => o.type === "video").map((o) => o.height)
-  );
+  // --- Merged video+audio (ffmpeg) for heights without a progressive stream ---
+  const covered = new Set(options.filter((o) => o.type === "video").map((o) => o.height));
   for (const h of VIDEO_HEIGHTS) {
-    if (coveredHeights.has(h)) continue;
-    const vf = ytdl.filterFormats(formats, "videoonly").find((fmt) => fmt.height === h);
-    if (vf) {
-      const af = ytdl.filterFormats(formats, "audioonly")[0];
-      if (af) {
-        options.push({
-          id: `merge-${h}`,
-          type: "video",
-          label: `${h}p (HD)`,
-          quality: `${h}p`,
-          container: "mp4",
-          needsMerge: true,
-          height: h,
-          bitrateKbps: Math.round(
-            ((parseInt(vf.bitrate || "0", 10) || 0) + (parseInt(af.bitrate || "0", 10) || 0)) / 1000
-          ),
-          sizeEstimateMB: estimateSize(
-            lengthSeconds,
-            (parseInt(vf.bitrate || "0", 10) || 0) + (parseInt(af.bitrate || "0", 10) || 0)
-          ),
-        });
-        coveredHeights.add(h);
-      }
+    if (covered.has(h)) continue;
+    if (videoOnly.length && audioOnly.length) {
+      options.push({
+        id: `merge-${h}`,
+        type: "video",
+        label: `${h}p (HD)`,
+        quality: `${h}p`,
+        container: "mp4",
+        needsMerge: true,
+        height: h,
+      });
+      covered.add(h);
     }
   }
 
-  // ---- Audio: highest quality MP3 (ffmpeg transcode) ----
-  const audioOnly = ytdl.filterFormats(formats, "audioonly");
-  const bestAudio = audioOnly.sort(
-    (a, b) => (parseInt(b.bitrate || "0", 10) || 0) - (parseInt(a.bitrate || "0", 10) || 0)
-  )[0];
+  // --- Best audio as MP3 (ffmpeg transcode) ---
+  const bestAudio =
+    audioOnly.sort((a, b) => (b.abr || 0) - (a.abr || 0))[0] ||
+    audioOnly.sort((a, b) => (b.tbr || 0) - (a.tbr || 0))[0];
   if (bestAudio) {
     options.push({
       id: "audio-mp3",
@@ -83,47 +80,36 @@ export async function buildVideoInfo(url: string): Promise<VideoInfo> {
       quality: "MP3",
       container: "mp3",
       needsMerge: true,
-      bitrateKbps: Math.round((parseInt(bestAudio.bitrate || "0", 10) || 0) / 1000),
-      sizeEstimateMB: bestAudio.contentLength
-        ? Math.round((parseInt(bestAudio.contentLength, 10) || 0) / 1024 / 1024)
-        : estimateSize(lengthSeconds, parseInt(bestAudio.bitrate || "0", 10)),
+      bitrateKbps: bestAudio.abr ? Math.round(bestAudio.abr) : undefined,
+      sizeEstimateMB: mbFromBytes(bestAudio.filesize),
     });
+    // Also offer original-format audio (often webm/opus) with no transcode.
+    if (bestAudio.ext && bestAudio.ext !== "mp3") {
+      options.push({
+        id: `audio-orig-${bestAudio.format_id}`,
+        type: "audio",
+        label: `Audio (${bestAudio.ext})`,
+        quality: "Audio",
+        container: bestAudio.ext as any,
+        itag: Number(bestAudio.format_id),
+        bitrateKbps: bestAudio.abr ? Math.round(bestAudio.abr) : undefined,
+        sizeEstimateMB: mbFromBytes(bestAudio.filesize),
+      });
+    }
   }
 
-  // ---- Audio: original opus (no transcode, fast) ----
-  const opus = audioOnly.find((f) => f.container === "webm" || f.codecs?.includes("opus"));
-  if (opus) {
-    options.push({
-      id: "audio-opus",
-      type: "audio",
-      label: "Opus (original)",
-      quality: "Audio",
-      container: "webm",
-      itag: opus.itag,
-      bitrateKbps: Math.round((parseInt(opus.bitrate || "0", 10) || 0) / 1000),
-      sizeEstimateMB: opus.contentLength
-        ? Math.round((parseInt(opus.contentLength, 10) || 0) / 1024 / 1024)
-        : estimate(opus.bitrate),
-    });
-  }
-
-  function estimate(bitrate?: string) {
-    return estimateSize(lengthSeconds, parseInt(bitrate || "0", 10));
-  }
-
-  // Order: video high→low, then audio
+  // Order: video high->low, then audio
   options.sort((a, b) => {
     if (a.type !== b.type) return a.type === "video" ? -1 : 1;
     return (b.height || 9999) - (a.height || 9999);
   });
 
   return {
-    videoId,
-    title: info.videoDetails.title,
-    author: info.videoDetails.author?.name || "YouTube",
-    lengthSeconds,
-    thumbnail:
-      info.videoDetails.thumbnails[info.videoDetails.thumbnails.length - 1]?.url || "",
+    videoId: meta.id,
+    title,
+    author: meta.uploader || meta.channel || "YouTube",
+    lengthSeconds: meta.duration ? Number(meta.duration) : 0,
+    thumbnail: meta.thumbnail || meta.thumbnails?.[meta.thumbnails.length - 1]?.url || "",
     options,
   };
 }

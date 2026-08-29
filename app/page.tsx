@@ -1,3 +1,5 @@
+"use client";
+
 import { motion } from "framer-motion";
 import Downloader from "@/components/Downloader";
 
