@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  color: #e8f7fb;
+  background-color: #05080d;
+  background-image:
+    radial-gradient(900px 500px at 12% -10%, rgba(0, 240, 255, 0.10), transparent 60%),
+    radial-gradient(800px 500px at 100% 0%, rgba(0, 240, 255, 0.06), transparent 55%),
+    radial-gradient(700px 600px at 50% 120%, rgba(0, 240, 255, 0.05), transparent 60%);
+  background-attachment: fixed;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(0, 240, 255, 0.14);
+}
+
+.glass-hover {
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.glass-hover:hover {
+  border-color: rgba(0, 240, 255, 0.5);
+  box-shadow: 0 0 34px rgba(0, 240, 255, 0.18);
+  transform: translateY(-3px);
+}
+
+.gradient-text {
+  background: linear-gradient(90deg, #00f0ff, #9afbff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 1rem;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.14), transparent);
+  animation: shimmer 1.6s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.25);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
