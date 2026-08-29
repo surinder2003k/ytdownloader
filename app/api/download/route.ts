@@ -74,6 +74,10 @@ async function handle(req: NextRequest) {
     const h = parseInt(optionId.replace("merge-", ""), 10);
     ytdlFormat = `bestvideo[height=${h}]+bestaudio/best[height<=${h}]`;
     outExt = "mp4";
+  } else if (optionId.startsWith("prog-")) {
+    const itag = optionId.replace("prog-", "");
+    ytdlFormat = itag; // single combined stream, no ffmpeg merge
+    outExt = "mp4";
   } else {
     ytdlFormat = "bestaudio/best";
     outExt = "mp3";
@@ -94,9 +98,11 @@ async function handle(req: NextRequest) {
     url,
     "-f",
     ytdlFormat,
-    ...(outExt === "mp4"
+    ...(outExt === "mp4" && !optionId.startsWith("prog-")
       ? ["--merge-output-format", "mp4"]
-      : ["-x", "--audio-format", "mp3", "--audio-quality", "0"]),
+      : outExt === "mp4"
+        ? []
+        : ["-x", "--audio-format", "mp3", "--audio-quality", "0"]),
     "-o",
     outPath,
     "--ignore-no-formats-error",

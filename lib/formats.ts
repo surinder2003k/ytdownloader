@@ -104,6 +104,36 @@ export function buildVideoInfo(meta: any): VideoInfo {
     return (b.height || 9999) - (a.height || 9999);
   });
 
+  // --- Fallback: some videos only expose SABR-locked / single progressive
+  // streams (often on shared datacenter IPs). If we built nothing from the
+  // standard logic but yt-dlp returned at least one playable format, offer it
+  // as a direct (no-ffmpeg) download so the user isn't left with 0 options.
+  if (options.length === 0) {
+    const direct = formats
+      .filter((f) => f.url)
+      .sort((a, b) => (b.height || 0) - (a.height || 0) || (b.tbr || 0) - (a.tbr || 0))[0];
+    if (direct) {
+      const h = direct.height || 0;
+      const ext = direct.ext === "webm" ? "webm" : "mp4";
+      const isAudio = direct.vcodec === "none";
+      options.push({
+        id: `prog-${direct.format_id}`,
+        type: isAudio ? "audio" : "video",
+        label: isAudio
+          ? `Audio (${direct.ext})`
+          : h
+            ? `${h}p`
+            : `Video (${direct.ext})`,
+        quality: isAudio ? "Audio" : h ? `${h}p` : "Video",
+        container: ext,
+        itag: Number(direct.format_id),
+        height: h || undefined,
+        bitrateKbps: direct.tbr ? Math.round(direct.tbr) : undefined,
+        sizeEstimateMB: mbFromBytes(direct.filesize),
+      });
+    }
+  }
+
   return {
     videoId: meta.id,
     title,

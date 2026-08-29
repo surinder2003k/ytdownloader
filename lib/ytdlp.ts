@@ -28,6 +28,8 @@ const TMP_BASE = makeTmpBase();
 // using the default `web` client. The `tv` / `tv_embedded` / `android` clients
 // are far less aggressively throttled. We try several, in order, and retry.
 const YT_CLIENTS = [
+  "tv_plus,web",
+  "android_producer,web",
   "android,web",
   "tv,web_safari,web",
   "tv_embedded,web",
@@ -89,12 +91,23 @@ export function runYtDlp(
     for (let i = 0; i < YT_CLIENTS.length; i++) {
       try {
         const raw = await attempt(YT_CLIENTS[i]);
-        return parseJson ? JSON.parse(raw) : raw;
+        if (!parseJson) return raw;
+        const parsed = JSON.parse(raw) as any;
+        // A client may "succeed" but return only SABR-locked formats (no URLs)
+        // — common on datacenter IPs. If every format lacks a usable URL, this
+        // client is useless for downloading; try the next one.
+        const fmts: any[] = parsed?.formats || [];
+        const hasPlayable = fmts.some(
+          (f) => f.url || f.manifest_url
+        );
+        if (fmts.length > 0 && !hasPlayable) {
+          lastErr = "All formats SABR-locked (no URLs) on this client.";
+          if (i < YT_CLIENTS.length - 1) await sleep(700 * (i + 1));
+          continue;
+        }
+        return parsed;
       } catch (e: any) {
         lastErr = e?.message || String(e);
-        // Retry across every client with a short backoff. Some clients fail for
-        // reasons other than a block (e.g. "format not available"), but another
-        // client in the list may still succeed — so we exhaust the whole list.
         if (i < YT_CLIENTS.length - 1) await sleep(700 * (i + 1));
       }
     }
