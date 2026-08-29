@@ -37,8 +37,6 @@ export async function POST(req: NextRequest) {
           "--skip-download",
           "--no-playlist",
           "--no-warnings",
-          "--js-runtimes",
-          "node",
           "--ffmpeg-location",
           ffmpegBin,
           "--add-header",
