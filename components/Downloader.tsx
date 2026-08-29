@@ -47,8 +47,8 @@ export default function Downloader() {
     try {
       const isDirect = !option.needsMerge;
       if (isDirect) {
-        // Direct formats: open the server endpoint in a hidden iframe/anchor so
-        // the browser follows the 302 and downloads straight from YouTube's CDN.
+        // Direct formats: open the server endpoint in an anchor so the browser
+        // follows the 302 and downloads straight from YouTube's CDN.
         const a = document.createElement("a");
         a.href = `/api/download?url=${encodeURIComponent(url.trim())}&optionId=${encodeURIComponent(option.id)}`;
         a.download = "";
@@ -100,20 +100,20 @@ export default function Downloader() {
   return (
     <div className="w-full">
       <form onSubmit={handleFetch} className="w-full">
-        <div className="glass flex flex-col gap-3 rounded-2xl p-3 sm:flex-row sm:items-center">
+        <div className="card flex flex-col gap-3 rounded-2xl p-3 sm:flex-row sm:items-center">
           <input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="Paste YouTube link here…  (https://youtube.com/watch?v=…)"
-            className="flex-1 bg-transparent px-4 py-3 text-base text-white placeholder:text-white/35 outline-none"
+            className="flex-1 bg-transparent px-4 py-3 text-base text-ink outline-none placeholder:text-ink-faint"
             aria-label="YouTube URL"
           />
           <motion.button
             type="submit"
             disabled={status === "loading"}
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            className="rounded-xl bg-accent px-7 py-3 font-semibold text-black shadow-[0_0_24px_rgba(0,240,255,0.35)] transition disabled:opacity-60"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="rounded-xl bg-brand px-7 py-3 font-semibold text-white transition hover:bg-brand-dark disabled:opacity-60"
           >
             {status === "loading" ? "Fetching…" : "Get Formats"}
           </motion.button>
@@ -126,7 +126,7 @@ export default function Downloader() {
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="mt-4 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger"
+            className="mt-4 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger"
           >
             {error}
           </motion.div>
@@ -143,7 +143,7 @@ export default function Downloader() {
             exit={{ opacity: 0 }}
             className="mt-8"
           >
-            <div className="glass flex gap-4 rounded-2xl p-4">
+            <div className="card flex gap-4 rounded-2xl p-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={info.thumbnail}
@@ -151,11 +151,11 @@ export default function Downloader() {
                 className="h-24 w-40 shrink-0 rounded-xl object-cover"
               />
               <div className="min-w-0">
-                <h2 className="line-clamp-2 text-lg font-semibold text-white">{info.title}</h2>
-                <p className="mt-1 text-sm text-white/50">
+                <h2 className="line-clamp-2 text-lg font-semibold text-ink">{info.title}</h2>
+                <p className="mt-1 text-sm text-ink-soft">
                   {info.author} • {formatDuration(info.lengthSeconds)}
                 </p>
-                <p className="mt-2 text-xs text-accent/70">
+                <p className="mt-2 text-xs font-medium text-brand-dark">
                   {info.options.length} formats available
                 </p>
               </div>

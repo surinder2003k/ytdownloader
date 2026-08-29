@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html,
@@ -13,46 +13,43 @@ body {
 
 body {
   margin: 0;
-  color: #e8f7fb;
-  background-color: #05080d;
+  color: #0f172a;
+  background-color: #f6f9fc;
   background-image:
-    radial-gradient(900px 500px at 12% -10%, rgba(0, 240, 255, 0.10), transparent 60%),
-    radial-gradient(800px 500px at 100% 0%, rgba(0, 240, 255, 0.06), transparent 55%),
-    radial-gradient(700px 600px at 50% 120%, rgba(0, 240, 255, 0.05), transparent 60%);
+    radial-gradient(1100px 520px at 50% -8%, rgba(6, 182, 212, 0.10), transparent 60%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
   background-attachment: fixed;
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.glass {
-  background: rgba(255, 255, 255, 0.035);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(0, 240, 255, 0.14);
+/* Clean card surfaces */
+.card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.05);
 }
 
-.glass-hover {
-  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.glass-hover:hover {
-  border-color: rgba(0, 240, 255, 0.5);
-  box-shadow: 0 0 34px rgba(0, 240, 255, 0.18);
+.card-hover:hover {
   transform: translateY(-3px);
+  border-color: rgba(6, 182, 212, 0.45);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08), 0 16px 40px rgba(6, 182, 212, 0.12);
 }
 
-.gradient-text {
-  background: linear-gradient(90deg, #00f0ff, #9afbff);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.brand-text {
+  color: #0891b2;
 }
 
 .skeleton {
   position: relative;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 1rem;
+  background: #e8edf3;
+  border-radius: 0.9rem;
 }
 
 .skeleton::after {
@@ -60,8 +57,8 @@ body {
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.14), transparent);
-  animation: shimmer 1.6s infinite;
+  background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.18), transparent);
+  animation: shimmer 1.5s infinite;
 }
 
 @keyframes shimmer {
@@ -74,10 +71,12 @@ body {
   width: 10px;
   height: 10px;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 240, 255, 0.25);
+  background: #cbd5e1;
   border-radius: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }

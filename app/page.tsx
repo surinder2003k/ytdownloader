@@ -12,15 +12,14 @@ export default function Home() {
         transition={{ duration: 0.5 }}
         className="text-center"
       >
-        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/5 px-4 py-1 text-xs font-medium text-accent">
-          <span className="h-2 w-2 animate-glow-pulse rounded-full bg-accent" />
+        <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-4 py-1 text-xs font-medium text-brand-dark">
           Free • No ads • Multi-quality
-        </div>
-        <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
-          <span className="gradient-text">YT Grab</span>
+        </span>
+        <h1 className="text-4xl font-extrabold tracking-tight text-ink sm:text-5xl">
+          YT Grab
         </h1>
-        <p className="mx-auto mt-4 max-w-xl text-balance text-white/60">
-          Grab any YouTube video or audio in the quality you want — 144p up to
+        <p className="mx-auto mt-4 max-w-xl text-balance text-ink-soft">
+          Download any YouTube video or audio in the quality you want — 144p up to
           1080p, plus MP3. Fast, clean, and free.
         </p>
       </motion.header>
@@ -34,7 +33,7 @@ export default function Home() {
         <Downloader />
       </motion.div>
 
-      <footer className="mt-16 text-center text-xs text-white/30">
+      <footer className="mt-16 text-center text-xs text-ink-faint">
         Not affiliated with YouTube. Download only content you have the right to.
       </footer>
     </main>
