@@ -6,5 +6,7 @@ out
 npm-debug.log*
 .DS_Store
 .vercel
-.yt-tmp/
 *.watch.html
+
+.vercel
+.env*
