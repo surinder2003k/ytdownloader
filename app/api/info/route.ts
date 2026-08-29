@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { spawn } from "child_process";
-import { ffmpegBin, getYtDlpBin, ytDlpEnv } from "@/lib/ytdlp";
+import { runYtDlp } from "@/lib/ytdlp";
 import { buildVideoInfo } from "@/lib/formats";
 
 export const runtime = "nodejs";
@@ -28,36 +27,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const meta = await new Promise<any>((resolve, reject) => {
-      const child = spawn(
-        getYtDlpBin(),
-        [
-          url,
-          "--dump-single-json",
-          "--skip-download",
-          "--no-playlist",
-          "--no-warnings",
-          "--ffmpeg-location",
-          ffmpegBin,
-          "--add-header",
-          "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        ],
-        { windowsHide: true, env: ytDlpEnv }
-      );
-      let out = "";
-      let err = "";
-      child.stdout.on("data", (d) => (out += d.toString()));
-      child.stderr.on("data", (d) => (err += d.toString()));
-      child.on("error", reject);
-      child.on("close", (code) => {
-        if (code !== 0) return reject(new Error(err.slice(-400) || `exit ${code}`));
-        try {
-          resolve(JSON.parse(out));
-        } catch {
-          reject(new Error("Failed to parse yt-dlp output"));
-        }
-      });
-    });
+    const meta = await runYtDlp(
+      [url, "--dump-single-json", "--skip-download"],
+      { parseJson: true }
+    );
 
     const info = buildVideoInfo(meta);
     if (!info || !info.options.length) {
@@ -70,16 +43,16 @@ export async function POST(req: NextRequest) {
   } catch (err: any) {
     const msg = err?.message || "";
     console.error("info error:", msg.slice(0, 300));
-    if (msg.includes("Sign in") || msg.includes("bot")) {
-      return NextResponse.json(
-        { error: "YouTube blocked this request. Try again in a moment." },
-        { status: 502 }
-      );
-    }
-    if (msg.includes("Private") || msg.includes("unavailable")) {
+    if (/Private|unavailable|not available/i.test(msg)) {
       return NextResponse.json(
         { error: "This video is private or unavailable." },
         { status: 404 }
+      );
+    }
+    if (/Sign in|blocked|bot|unusual traffic|429|try again/i.test(msg)) {
+      return NextResponse.json(
+        { error: "YouTube blocked this request. Try again in a moment." },
+        { status: 502 }
       );
     }
     return NextResponse.json(

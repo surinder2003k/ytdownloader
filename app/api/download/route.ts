@@ -1,9 +1,8 @@
 import { NextRequest } from "next/server";
-import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { ffmpegBin, getYtDlpBin, ytDlpEnv } from "@/lib/ytdlp";
+import { ffmpegBin, getYtDlpBin, ytDlpEnv, runYtDlp } from "@/lib/ytdlp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,41 +32,6 @@ async function resolveParams(req: NextRequest): Promise<{ url: string; optionId:
   return null;
 }
 
-// Run yt-dlp directly (no wrapper) and return parsed JSON. This avoids the
-// youtube-dl-exec CJS/ESM wrapper quirks inside Next's bundled runtime.
-function ytDlpJson(url: string): Promise<any> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(
-      getYtDlpBin(),
-      [
-        url,
-        "--dump-single-json",
-        "--skip-download",
-        "--no-playlist",
-        "--no-warnings",
-        "--ffmpeg-location",
-        ffmpegBin,
-        "--add-header",
-        "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-      ],
-      { windowsHide: true, env: ytDlpEnv }
-    );
-    let out = "";
-    let err = "";
-    child.stdout.on("data", (d) => (out += d.toString()));
-    child.stderr.on("data", (d) => (err += d.toString()));
-    child.on("error", reject);
-    child.on("close", (code) => {
-      if (code !== 0) return reject(new Error(err.slice(-400) || `exit ${code}`));
-      try {
-        resolve(JSON.parse(out));
-      } catch (e) {
-        reject(new Error("Failed to parse yt-dlp output"));
-      }
-    });
-  });
-}
-
 export async function GET(req: NextRequest) {
   return handle(req);
 }
@@ -84,7 +48,9 @@ async function handle(req: NextRequest) {
   // ---------- DIRECT formats: redirect browser straight to the media URL ----------
   if (!optionId.startsWith("merge-") && !optionId.startsWith("audio-mp3")) {
     try {
-      const meta = await ytDlpJson(url);
+      const meta = await runYtDlp([url, "--dump-single-json", "--skip-download"], {
+        parseJson: true,
+      });
       const fmtId = optionId.replace(/^prog-|audio-orig-/, "");
       const fmt = (meta.formats || []).find((f: any) => String(f.format_id) === fmtId);
       if (!fmt || !fmt.url) {
@@ -109,7 +75,7 @@ async function handle(req: NextRequest) {
     ytdlFormat = `bestvideo[height=${h}]+bestaudio/best[height<=${h}]`;
     outExt = "mp4";
   } else {
-    ytdlFormat = "bestaudio";
+    ytdlFormat = "bestaudio/best";
     outExt = "mp3";
   }
 
@@ -117,7 +83,9 @@ async function handle(req: NextRequest) {
 
   let niceName = "video";
   try {
-    const m = await ytDlpJson(url);
+    const m = await runYtDlp([url, "--dump-single-json", "--skip-download"], {
+      parseJson: true,
+    });
     niceName = sanitize(m.title || "video");
   } catch {}
   const finalName = `${niceName}.${outExt}`;
@@ -131,26 +99,21 @@ async function handle(req: NextRequest) {
       : ["-x", "--audio-format", "mp3", "--audio-quality", "0"]),
     "-o",
     outPath,
-    "--no-playlist",
-    "--ffmpeg-location",
-    ffmpegBin,
-    "--postprocessor-args",
-    "ffmpeg:-strict experimental",
-    "--no-warnings",
-    "--add-header",
-    "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "--ignore-no-formats-error",
   ];
 
-  await new Promise<void>((resolve, reject) => {
-    const child = spawn(getYtDlpBin(), args, { windowsHide: true, env: ytDlpEnv });
-    let stderr = "";
-    child.stderr.on("data", (d) => (stderr += d.toString()));
-    child.on("error", reject);
-    child.on("close", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`yt-dlp exited ${code}: ${stderr.slice(-500)}`));
-    });
-  });
+  try {
+    await runYtDlp(args, { timeoutMs: 280_000 });
+  } catch (e: any) {
+    fs.rmSync(workDir, { recursive: true, force: true });
+    const msg = e?.message || "";
+    if (/Sign in|blocked|bot|unusual traffic|429|try again/i.test(msg)) {
+      return new Response("YouTube blocked this request. Try again in a moment.", {
+        status: 502,
+      });
+    }
+    return new Response("Download failed. Please try again.", { status: 502 });
+  }
 
   if (!fs.existsSync(outPath)) {
     return new Response("Output file was not produced.", { status: 502 });
