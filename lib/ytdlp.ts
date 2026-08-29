@@ -3,10 +3,25 @@ import path from "path";
 import fs from "fs";
 import os from "os";
 
-// yt-dlp's embedded Python needs a writable temp dir. Use the OS temp dir
-// (/tmp on Vercel / Linux, AppData\Local\Temp on Windows). Avoid cwd because
-// serverless filesystems are read-only outside /tmp.
-const TMP_BASE = fs.mkdtempSync(path.join(os.tmpdir(), "ytgrab-"));
+// yt-dlp's embedded Python needs a writable temp dir. Use a known-good writable
+// location: /tmp on Vercel/Linux, the OS temp dir elsewhere. Fall back gracefully.
+function makeTmpBase(): string {
+  const candidates = [process.env.TMPDIR, process.env.TEMP, process.env.TMP, "/tmp", os.tmpdir()];
+  for (const c of candidates) {
+    if (!c) continue;
+    try {
+      fs.mkdirSync(c, { recursive: true });
+      const probe = fs.mkdtempSync(path.join(c, "ytgrab-"));
+      return probe;
+    } catch {
+      continue;
+    }
+  }
+  // last resort
+  return fs.mkdtempSync(path.join(os.tmpdir(), "ytgrab-"));
+}
+
+const TMP_BASE = makeTmpBase();
 
 // Resolve the bundled yt-dlp binary. We avoid `require.resolve('youtube-dl-exec/package.json')`
 // because Next's webpack `require.resolve` returns a numeric module id, not a path.
