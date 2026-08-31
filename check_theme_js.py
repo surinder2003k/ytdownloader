@@ -1,0 +1,16 @@
+from playwright.sync_api import sync_playwright
+with sync_playwright() as p:
+    b = p.chromium.launch(headless=True)
+    p1 = b.new_page()
+    p1.goto("https://ytdownloader-one.vercel.app/", wait_until="domcontentloaded")
+    cls = p1.locator("html").get_attribute("class")
+    btn_text = p1.locator('button[aria-label="Toggle theme"]').inner_text()
+    print("HTML CLASS:", cls)
+    print("BUTTON TEXT:", btn_text)
+    p1.locator('button[aria-label="Toggle theme"]').click()
+    p1.wait_for_timeout(600)
+    cls_after = p1.locator("html").get_attribute("class")
+    btn_text_after = p1.locator('button[aria-label="Toggle theme"]').inner_text()
+    print("AFTER CLICK CLASS:", cls_after)
+    print("AFTER CLICK BTN:", btn_text_after)
+    b.close()

@@ -14,8 +14,9 @@ export default function Home() {
   }, []);
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove("light", "dark");
+    root.classList.remove("light", "dark", "system");
     root.classList.add(theme);
+    root.style.colorScheme = theme === "dark" ? "dark" : "light";
     try { localStorage.setItem("theme", theme); } catch {}
   }, [theme]);
   const toggleTheme = () => {
