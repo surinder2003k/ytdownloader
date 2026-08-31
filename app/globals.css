@@ -3,6 +3,14 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: dark;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.light {
   color-scheme: light;
 }
 
