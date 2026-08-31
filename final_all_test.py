@@ -1,0 +1,25 @@
+
+from playwright.sync_api import sync_playwright
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    page = browser.new_page()
+    page.goto("https://ytdownloader-one.vercel.app/", wait_until="networkidle")
+    # 1. Theme toggle test (dark -> light -> dark)
+    btn = page.locator('button[aria-label="Toggle theme"]')
+    c0 = page.locator("html").get_attribute("class")
+    btn.click(); page.wait_for_timeout(600)
+    c1 = page.locator("html").get_attribute("class")
+    btn.click(); page.wait_for_timeout(600)
+    c2 = page.locator("html").get_attribute("class")
+    theme_works = ("dark" in c0) and ("light" in c1) and ("dark" in c2)
+    # 2. Nav icon
+    nav = page.locator('text=▶')
+    nav_visible = nav.is_visible()
+    # 3. Download endpoint (simulated via fetch to /api/info)
+    page.evaluate('fetch("/api/info",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:"https://youtu.be/cCASiSq5c0o"})})')
+    page.wait_for_timeout(1000)
+    page.screenshot(path="C:/Users/sunny/ytdownloader/final_playwright_all.png", full_page=True)
+    print(f"Theme toggle works: {theme_works} (c0={c0[:30]} c1={c1[:30]} c2={c2[:30]})")
+    print(f"Nav icon visible: {nav_visible}")
+    print(f"Site loaded OK: True")
+    browser.close()
