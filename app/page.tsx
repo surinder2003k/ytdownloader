@@ -33,7 +33,7 @@ export default function Home() {
     try { localStorage.setItem("theme", next); } catch {}
   };
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col px-5 py-10 sm:py-16">
+    <main style={{ background: "#0a0a0e", color: "#f8fafc" }} className="mx-auto flex min-h-screen w-full max-w-4xl flex-col px-5 py-10 sm:py-16">
       <div className="flex justify-end mb-2">
         <button onClick={toggleTheme} aria-label="Toggle theme" title="Theme" className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2 text-xs font-semibold text-white shadow-lg hover:bg-ink/80 transition rounded-full"><span className="text-sm">{theme === "dark" ? "☾" : "◉"}</span><span className="uppercase tracking-wide">{theme === "dark" ? "DARK" : "LIGHT"}</span></button>
       </div>
