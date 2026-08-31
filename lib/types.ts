@@ -13,6 +13,12 @@ export interface QualityOption {
   height?: number;
   bitrateKbps?: number;
   sizeEstimateMB?: number;
+  /** source backend: "ytdlp" (default) or "cobalt" (fallback) */
+  source?: "ytdlp" | "cobalt";
+  /** cobalt tunnel URL (when source === "cobalt") */
+  cobaltUrl?: string;
+  /** cobalt-provided filename (when source === "cobalt") */
+  cobaltFilename?: string;
 }
 
 export interface VideoInfo {

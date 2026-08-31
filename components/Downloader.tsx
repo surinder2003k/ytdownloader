@@ -62,6 +62,27 @@ export default function Downloader() {
   async function handleDownload(option: QualityOption) {
     if (!info) return;
     setDownloadingId(option.id);
+
+    // Cobalt-fallback option: the server already gave us a tunnel URL, so we
+    // can just stream it directly. No need to round-trip back to /api/download.
+    if (option.source === "cobalt" && option.cobaltUrl) {
+      try {
+        const a = document.createElement("a");
+        a.href = option.cobaltUrl;
+        a.download = option.cobaltFilename || "video.mp4";
+        a.rel = "noopener noreferrer";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setDownloadingId(null);
+        return;
+      } catch (err: any) {
+        setError(err.message || "Cobalt download failed.");
+        setDownloadingId(null);
+        return;
+      }
+    }
+
     try {
       const isDirect = !option.needsMerge;
       if (isDirect) {

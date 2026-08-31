@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runYtDlp } from "@/lib/ytdlp";
 import { buildVideoInfo } from "@/lib/formats";
+import { runCobalt } from "@/lib/cobalt";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,13 +35,44 @@ export async function POST(req: NextRequest) {
     );
 
     const info = buildVideoInfo(meta);
-    if (!info || !info.options.length) {
+    if (info && info.options.length) {
+      return NextResponse.json({ info });
+    }
+    // yt-dlp gave us no usable formats (e.g. Vercel IP got SABR-locked).
+    // Fall back to Cobalt (uses residential IPs, handles YouTube auth properly).
+    const cobalt = await runCobalt(url, "720", false);
+    if (!cobalt) {
       return NextResponse.json(
         { error: "No downloadable formats were found for this video." },
         { status: 422 }
       );
     }
-    return NextResponse.json({ info });
+    // Build a synthetic single-option response from the Cobalt tunnel.
+    const metaTitle = (meta && (meta.title || meta.uploader)) || "video";
+    return NextResponse.json({
+      info: {
+        title: metaTitle,
+        author: meta?.uploader || "",
+        lengthSeconds: meta?.duration || 0,
+        thumbnail: (meta?.thumbnails && meta.thumbnails[meta.thumbnails.length - 1]?.url) || "",
+        options: [
+          {
+            id: "cobalt-720",
+            label: "720p",
+            quality: "720p",
+            container: "mp4",
+            codec: "h264",
+            size: "",
+            needsMerge: false,
+            source: "cobalt",
+            cobaltUrl: cobalt.url,
+            cobaltFilename: cobalt.filename,
+            itag: null,
+          },
+        ],
+        cobalt: true,
+      },
+    });
   } catch (err: any) {
     const msg = err?.message || "";
     console.error("info error:", msg.slice(0, 300));
