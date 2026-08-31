@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import Downloader from "@/components/Downloader";
 
 export default function Home() {
-  const [theme, setTheme] = useState<"light"|"dark"|"system">("system");
+  const [theme, setTheme] = useState<"light"|"dark">("dark");
   useEffect(() => {
     try {
       const saved = localStorage.getItem("theme");
