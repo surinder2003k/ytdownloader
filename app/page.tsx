@@ -17,6 +17,14 @@ export default function Home() {
     root.classList.remove("light", "dark", "system");
     root.classList.add(theme);
     root.style.colorScheme = theme === "dark" ? "dark" : "light";
+    // Force dark mode appearance by applying dark background and colors to body
+    if (theme === "dark") {
+      document.body.style.backgroundColor = "#0a0a12";
+      document.body.style.color = "#f8fafc";
+    } else {
+      document.body.style.backgroundColor = "#f6f9fc";
+      document.body.style.color = "#0f172a";
+    }
     try { localStorage.setItem("theme", theme); } catch {}
   }, [theme]);
   const toggleTheme = () => {
