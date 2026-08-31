@@ -43,12 +43,15 @@ export function QualityCard({ option, onDownload, downloadingId }: any) {
 
         {/* Action buttons */}
         <div className="flex gap-2 mt-1">
-          <button
-            onClick={() => { if (!showPlayer) setShowPlayer(true); else setShowPlayer(false); }}
-            className="flex-1 rounded-xl bg-ink/5 border border-border px-3 py-2 text-xs font-semibold text-ink hover:bg-ink hover:text-white transition-colors"
+          <a
+            href={option.cobaltUrl || "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => { if (!option.cobaltUrl) { e.preventDefault(); setShowPlayer(!showPlayer); } }}
+            className="flex-1 text-center rounded-xl bg-ink/5 border border-border px-3 py-2 text-xs font-semibold text-ink hover:bg-ink hover:text-white transition-colors"
           >
-            {showPlayer ? "Hide" : "Preview"}
-          </button>
+            {showPlayer ? "Hide" : (option.cobaltUrl ? "Preview" : "Preview (load)")}
+          </a>
           <button
             onClick={handleDownload}
             disabled={loading}
