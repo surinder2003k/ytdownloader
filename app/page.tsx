@@ -8,9 +8,19 @@ export default function Home() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem("theme");
-      if (saved === "light" || saved === "dark") setTheme(saved);
+      if (saved === "light" || saved === "dark") setTheme(saved as any);
+      else {
+        const dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        setTheme(dark ? "dark" : "system");
+      }
     } catch {}
   }, []);
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove("light", "dark");
+    if (theme === "dark") root.classList.add("dark");
+    else if (theme === "light") root.classList.add("light");
+  }, [theme]);
   const toggleTheme = () => {
     const next = theme === "light" ? "dark" : theme === "dark" ? "system" : "light";
     setTheme(next);
@@ -19,7 +29,7 @@ export default function Home() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col px-5 py-10 sm:py-16">
       <div className="flex justify-end mb-2">
-        <button onClick={toggleTheme} aria-label="Toggle theme" title="Theme: system / dark / light" className="rounded-full border border-border bg-card p-2 hover:border-brand transition shadow-sm"><span className="text-lg">{theme === "dark" ? "🌙" : theme === "system" ? "◐" : "☀"}</span></button>
+        <button onClick={toggleTheme} aria-label="Toggle theme" title="Theme" className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2 text-xs font-semibold text-white shadow-lg hover:bg-ink/80 transition"><span className="text-sm">{theme === "dark" ? "☾" : theme === "system" ? "◈" : "◉"}</span><span className="uppercase tracking-wide">{theme === "system" ? "System" : theme === "dark" ? "Dark" : "Light"}</span></button>
       </div>
       <motion.header initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="text-center">
         <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-4 py-1 text-xs font-medium text-brand-dark">
