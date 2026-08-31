@@ -40,36 +40,60 @@ export async function POST(req: NextRequest) {
     }
     // yt-dlp gave us no usable formats (e.g. Vercel IP got SABR-locked).
     // Fall back to Cobalt (uses residential IPs, handles YouTube auth properly).
-    const cobalt = await runCobalt(url, "720", false);
-    if (!cobalt) {
-      return NextResponse.json(
-        { error: "No downloadable formats were found for this video." },
-        { status: 422 }
-      );
+    // Build options from Cobalt results (multi-quality + audio)
+    const cobaltVideo = await runCobalt(url, "max", false);
+    const cobaltAudio = await runCobaltAudio(url);
+    const options: any[] = [];
+    // Multiple video qualities
+    const videoQualities = ["max", "720", "1080", "480", "360", "240", "144"];
+    for (const q of videoQualities) {
+      const r = await runCobalt(url, q, false);
+      if (r && !options.find(o => o.quality === r.quality)) {
+        options.push({
+          id: "cobalt-" + r.quality,
+          label: r.label || r.quality + (r.quality === "max" ? " (Best)" : "p"),
+          quality: r.quality === "max" ? "2160p (Best)" : r.quality + "p",
+          container: "mp4",
+          codec: "h264",
+          needsMerge: false,
+          source: "cobalt",
+          cobaltUrl: r.url,
+          cobaltFilename: r.filename,
+          itag: null,
+        });
+      }
+      // Small delay to avoid hammering Railway
+      if (q !== "144") await new Promise(r => setTimeout(r, 200));
     }
-    // Build a synthetic single-option response from the Cobalt tunnel.
+    // Audio option (if different from video)
+    if (cobaltAudio && !options.find(o => o.id === "cobalt-audio")) {
+      options.push({
+        id: "cobalt-audio",
+        label: "MP3 (Audio only)",
+        quality: "MP3 128kbps",
+        container: "mp3",
+        codec: "mp3",
+        needsMerge: false,
+        source: "cobalt",
+        cobaltUrl: cobaltAudio.url,
+        cobaltFilename: cobaltAudio.filename,
+        itag: null,
+      });
+    }
+    // Extract videoId and title from URL / metadata
+    const videoIdMatch = url.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})(?:[?&]|$)/);
+    const videoId = videoIdMatch ? videoIdMatch[1] : "";
     const metaTitle = (meta && (meta.title || meta.uploader)) || "video";
+    const videoIdMatch = url.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})(?:[?&]|$)/);
+    const videoId = videoIdMatch ? videoIdMatch[1] : "";
     return NextResponse.json({
       info: {
+        videoId,
         title: metaTitle,
         author: meta?.uploader || "",
         lengthSeconds: meta?.duration || 0,
         thumbnail: (meta?.thumbnails && meta.thumbnails[meta.thumbnails.length - 1]?.url) || "",
-        options: [
-          {
-            id: "cobalt-720",
-            label: "720p",
-            quality: "720p",
-            container: "mp4",
-            codec: "h264",
-            size: "",
-            needsMerge: false,
-            source: "cobalt",
-            cobaltUrl: cobalt.url,
-            cobaltFilename: cobalt.filename,
-            itag: null,
-          },
-        ],
+        options: options.length ? options : [{ id: "cobalt-720", label: "720p (Cobalt)", quality: "720p", container: "mp4", codec: "h264", needsMerge: false, source: "cobalt", cobaltUrl: cobalt?.url || "", cobaltFilename: cobalt?.filename || "video", itag: null }],
         cobalt: true,
       },
     });
