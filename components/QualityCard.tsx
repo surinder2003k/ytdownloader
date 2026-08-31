@@ -1,60 +1,67 @@
 "use client";
-
+import { useState } from "react";
 import { motion } from "framer-motion";
-import type { QualityOption } from "@/lib/types";
 
-interface Props {
-  option: QualityOption;
-  onSelect: (o: QualityOption) => void;
-  loading: boolean;
-}
+export function QualityCard({ option, onDownload, downloadingId }: any) {
+  const [showPlayer, setShowPlayer] = useState(false);
+  const loading = downloadingId === option.id;
 
-function formatSize(mb?: number): string {
-  if (!mb) return "";
-  if (mb >= 1024) return `~${(mb / 1024).toFixed(1)} GB`;
-  return `~${mb} MB`;
-}
+  const handleDownload = () => {
+    if (onDownload) onDownload(option);
+  };
 
-export function QualityCard({ option, onSelect, loading }: Props) {
-  const isVideo = !(option.container === "mp3" || option.quality?.toLowerCase().includes("mp3"));
+  const isAudio = option.container === "mp3" || option.id.includes("audio");
 
   return (
-    <motion.button
-      type="button"
-      disabled={loading}
-      onClick={() => onSelect(option)}
-      whileHover={{ y: -4, scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ type: "spring", stiffness: 300, damping: 22 }}
-      className="card card-hover group relative flex flex-col items-start gap-2 rounded-2xl p-5 text-left disabled:cursor-wait disabled:opacity-70"
+    <motion.div
+      whileHover={{ y: -4 }}
+      className="group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card to-ink/5 shadow-xl transition-all hover:shadow-2xl hover:border-brand/40"
     >
-      <span
-        className={`text-xs font-semibold uppercase tracking-wider ${
-          isVideo ? "text-brand-dark" : "text-success"
-        }`}
-      >
-        {isVideo ? "Video" : "Audio"}
-      </span>
+      <div className="flex flex-col p-4 gap-3">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <span className="inline-flex items-center rounded-full bg-brand/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand">{isAudio ? "Audio" : option.quality}</span>
+          <span className="text-[10px] text-ink-faint font-medium">{option.container.toUpperCase()}</span>
+        </div>
 
-      <span className="text-2xl font-bold leading-none text-ink">{option.label}</span>
+        <h4 className="text-sm font-bold text-ink leading-tight">{option.label}</h4>
 
-      <span className="text-sm text-ink-soft">
-        {option.container.toUpperCase()}
-        {option.bitrateKbps ? ` • ${option.bitrateKbps} kbps` : ""}
-      </span>
-
-      <div className="mt-1 flex w-full items-center justify-between">
-        <span className="text-xs text-ink-faint">{formatSize(option.sizeEstimateMB)}</span>
-        {option.needsMerge && (
-          <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-medium text-brand-dark">
-            ffmpeg
-          </span>
+        {/* Player / Preview (only for audio or when clicked) */}
+        {showPlayer && isAudio && (
+          <div className="rounded-xl bg-ink/90 p-3 shadow-inner">
+            <audio controls className="w-full h-8" style={{ filter: "invert(0.9)" }}>
+              <source src={option.cobaltUrl || ""} type="audio/mpeg" />
+            </audio>
+          </div>
         )}
-      </div>
 
-      {loading && (
-        <span className="absolute right-4 top-4 h-4 w-4 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
-      )}
-    </motion.button>
+        {showPlayer && !isAudio && option.cobaltUrl && (
+          <div className="rounded-xl bg-ink overflow-hidden shadow-inner">
+            <video controls className="w-full rounded-lg h-28 object-cover" preload="metadata" src={option.cobaltUrl} />
+          </div>
+        )}
+
+        {/* Action buttons */}
+        <div className="flex gap-2 mt-1">
+          <button
+            onClick={() => { if (!showPlayer) setShowPlayer(true); else setShowPlayer(false); }}
+            className="flex-1 rounded-xl bg-ink/5 border border-border px-3 py-2 text-xs font-semibold text-ink hover:bg-ink hover:text-white transition-colors"
+          >
+            {showPlayer ? "Hide" : "Preview"}
+          </button>
+          <button
+            onClick={handleDownload}
+            disabled={loading}
+            className="flex-1 rounded-xl bg-brand text-white px-3 py-2 text-xs font-bold shadow-lg shadow-brand/20 hover:bg-brand/90 hover:shadow-brand/40 transition-all active:scale-[0.98] disabled:opacity-60"
+          >
+            {loading ? (
+              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white mx-auto" />
+            ) : (
+              "Download"
+            )}
+          </button>
+        </div>
+      </div>
+    </motion.div>
   );
 }

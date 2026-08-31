@@ -9,10 +9,7 @@ export default function Home() {
     try {
       const saved = localStorage.getItem("theme");
       if (saved === "light" || saved === "dark") setTheme(saved as any);
-      else {
-        const dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-        setTheme(dark ? "dark" : "system");
-      }
+      else { setTheme("system"); }
     } catch {}
   }, []);
   useEffect(() => {
