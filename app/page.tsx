@@ -45,7 +45,7 @@ export default function Home() {
           <span className="text-4xl">▶</span>
           <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">YT Grab</h1>
         </div>
-        <p className="mx-auto mt-4 max-w-xl text-balance text-slate-300">Download any YouTube video or audio in the quality you want — 144p up to 1080p, plus MP3. Fast, clean, and free.</p>
+        <p className="mx-auto mt-4 max-w-xl text-balance text-white">Download any YouTube video or audio in the quality you want — 144p up to 1080p, plus MP3. Fast, clean, and free.</p>
       </motion.header>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.5 }} className="mt-12">
         <Downloader />
