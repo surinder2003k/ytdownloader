@@ -22,7 +22,9 @@ export interface QualityOption {
 }
 
 export interface VideoInfo {
-  videoId: string;
+  videoId?: string;
+  playlistId?: string;
+  isPlaylist?: boolean;
   title: string;
   author: string;
   lengthSeconds: number;

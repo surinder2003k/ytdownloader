@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runYtDlp } from "@/lib/ytdlp";
 import { buildVideoInfo } from "@/lib/formats";
-import { runCobalt } from "@/lib/cobalt";
+import { runCobalt, runCobaltAudio, runCobaltMulti } from "@/lib/cobalt";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -81,11 +81,13 @@ export async function POST(req: NextRequest) {
       });
     }
     // Extract videoId and title from URL / metadata
-    const videoIdMatch = url.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})(?:[?&]|$)/);
+    const videoIdMatch = url.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})(?:[?&]|$)/) || url.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
     const videoId = videoIdMatch ? videoIdMatch[1] : "";
     const metaTitle = (meta && (meta.title || meta.uploader)) || "video";
-    const videoIdMatch = url.match(/(?:v=|\/)([a-zA-Z0-9_-]{11})(?:[?&]|$)/);
-    const videoId = videoIdMatch ? videoIdMatch[1] : "";
+    // Playlist support
+    const playlistMatch = url.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+    const isPlaylist = !!playlistMatch;
+    const playlistId = playlistMatch ? playlistMatch[1] : null;
     return NextResponse.json({
       info: {
         videoId,
@@ -93,7 +95,9 @@ export async function POST(req: NextRequest) {
         author: meta?.uploader || "",
         lengthSeconds: meta?.duration || 0,
         thumbnail: (meta?.thumbnails && meta.thumbnails[meta.thumbnails.length - 1]?.url) || "",
-        options: options.length ? options : [{ id: "cobalt-720", label: "720p (Cobalt)", quality: "720p", container: "mp4", codec: "h264", needsMerge: false, source: "cobalt", cobaltUrl: cobalt?.url || "", cobaltFilename: cobalt?.filename || "video", itag: null }],
+        options: options.length ? options : [{ id: "cobalt-720", label: "720p (Cobalt)", quality: "720p", container: "mp4", codec: "h264", needsMerge: false, source: "cobalt", cobaltUrl: cobaltVideo?.url || "", cobaltFilename: cobaltVideo?.filename || "video", itag: null }],
+        isPlaylist: !!playlistId,
+        playlistId: playlistId || undefined,
         cobalt: true,
       },
     });

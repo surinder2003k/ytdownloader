@@ -16,7 +16,7 @@ function formatSize(mb?: number): string {
 }
 
 export function QualityCard({ option, onSelect, loading }: Props) {
-  const isVideo = option.type === "video";
+  const isVideo = !(option.container === "mp3" || option.quality?.toLowerCase().includes("mp3"));
 
   return (
     <motion.button

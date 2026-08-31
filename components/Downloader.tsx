@@ -4,6 +4,9 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LoadingState } from "@/components/Shimmer";
 import { QualityCard } from "@/components/QualityCard";
+import VideoEmbed from "@/components/VideoEmbed";
+import PlaylistGrid from "@/components/PlaylistGrid";
+
 import type { VideoInfo, QualityOption } from "@/lib/types";
 
 function formatDuration(sec: number): string {
@@ -69,6 +72,8 @@ export default function Downloader() {
       try {
         const a = document.createElement("a");
         a.href = option.cobaltUrl;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
         a.download = option.cobaltFilename || "video.mp4";
         a.rel = "noopener noreferrer";
         document.body.appendChild(a);
@@ -234,6 +239,10 @@ export default function Downloader() {
               </div>
             </div>
 
+            <div className="mt-4">
+              <VideoEmbed videoId={info.videoId} />
+            {info.isPlaylist && <PlaylistGrid playlistId={info.playlistId || info.videoId || ""} />}
+            </div>
             <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               {info.options.map((o) => (
                 <QualityCard
